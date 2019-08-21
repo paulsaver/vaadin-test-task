@@ -1,6 +1,13 @@
 package Entity;
 
+import javax.persistence.*;
+
+@Entity
+@Table(name = "doctor")
 public class Doctor {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
     private String name;
     private String surName;

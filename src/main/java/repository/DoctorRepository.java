@@ -2,6 +2,8 @@ package repository;
 
 import Entity.Doctor;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-public interface DoctorRepository extends JpaRepository<Long, Doctor> {
+@Repository
+public interface DoctorRepository extends JpaRepository<Doctor, Long> {
 }
