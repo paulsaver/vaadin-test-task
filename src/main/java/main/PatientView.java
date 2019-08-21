@@ -1,37 +1,74 @@
 package main;
 
-import Entity.Patient;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.Route;
-import repository.PatientRepository;
+import org.apache.commons.lang3.StringUtils;
 
-import java.awt.*;
-import java.util.List;
-
-@Route("/patient")
+@Route("patient")
 public class PatientView extends VerticalLayout {
 
-    public PatientView(PatientRepository patientRepository) {
-        Grid<Patient> grid = new Grid<>();
-        grid.addColumn(Patient::getName).setHeader("First Name");
-        grid.addColumn(Patient::getSurName).setHeader("Last Name");
-        grid.addColumn(Patient::getPatronic).setHeader("Patronic");
-        grid.addColumn(Patient::getPhone).setHeader("Phone");
+    private final PatientRepository patientRepository;
+    private final PatientEditor patientEditor;
 
-        List<Patient> everyone = patientRepository.findAll();
-        grid.setItems(everyone);
-        TextField firstName = new TextField();
-        TextField lastName = new TextField();
-        TextField patronic = new TextField();
-        TextField phone = new TextField();
-        Button addButton = new Button("Add patient");
+    final Grid<Patient> grid;
 
-        addButton.addClickListener(click-> {
-            
+    final TextField filter;
+
+    private final Button addNewBtn;
+
+    public PatientView(PatientRepository patientRepository, PatientEditor patientEditor) {
+        this.patientRepository = patientRepository;
+        this.patientEditor = patientEditor;
+        this.grid = new Grid<>(Patient.class);
+        this.filter = new TextField();
+        this.addNewBtn = new Button("New patient", VaadinIcon.PLUS.create());
+
+        // build layout
+        HorizontalLayout actions = new HorizontalLayout(filter, addNewBtn);
+        add(actions, grid, patientEditor);
+
+        grid.setHeight("300px");
+        grid.setColumns("id", "firstName", "lastName", "patronic", "phone");
+        grid.getColumnByKey("id").setWidth("50px").setFlexGrow(0);
+
+        filter.setPlaceholder("Filter by last name");
+
+        // Hook logic to components
+
+        // Replace listing with filtered content when user changes filter
+        filter.setValueChangeMode(ValueChangeMode.EAGER);
+        filter.addValueChangeListener(e -> listPatient(e.getValue()));
+
+        // Connect selected Customer to editor or hide if none is selected
+        grid.asSingleSelect().addValueChangeListener(e -> {
+            patientEditor.editPatient(e.getValue());
         });
 
-        add(grid);
+        // Instantiate and edit new Customer the new button is clicked
+        addNewBtn.addClickListener(e -> patientEditor.editPatient(new Patient("", "", "", "")));
+
+        // Listen changes made by the editor, refresh data from backend
+        patientEditor.setChangeHandler(() -> {
+            patientEditor.setVisible(false);
+            listPatient(filter.getValue());
+        });
+
+        // Initialize listing
+        listPatient(null);
+    }
+
+    private void listPatient(String filterText) {
+        if (StringUtils.isEmpty(filterText)) {
+            grid.setItems(patientRepository.findAll());
+        }
+        else {
+            grid.setItems(patientRepository.findByLastNameStartsWithIgnoreCase(filterText));
+        }
     }
 }
